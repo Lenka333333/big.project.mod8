@@ -77,7 +77,10 @@ pi_i = 200
 lambda_E = 1
 lambda_I = 21/8 #not sure about this number
 schedule = [0]*32
-
+#give the decisions numbers, so they are comparable
+d_e = 1
+d_i = 2
+d_o = 3
 
 
 def time(stage):
@@ -154,5 +157,10 @@ def transition_prob(state,decision,stage,nextstate):
         p_e,
     )
 
+def recurrence_relation(stage, state):
+    if stage == 33:
+        return revenue(33,0, stage) #independent of the decision
+    else:
+        return max(revenue(state,d_i,stage)+ )
 
 
