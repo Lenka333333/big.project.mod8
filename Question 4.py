@@ -1,9 +1,10 @@
 
 import math
+import itertools
 
 TRANSITIONS = {
 
-'d_i': {
+2: {
 
     # n-state transitions
     (0, 0, 0, 0): lambda p_ns,p_i,p_e: p_ns*p_i*(1-p_e),
@@ -23,7 +24,7 @@ TRANSITIONS = {
 },
 
 
-'d_o': {
+3: {
 
     # n-state transitions
     (0, 0, 0, 0): lambda p_ns,p_i,p_e: 0,
@@ -45,7 +46,7 @@ TRANSITIONS = {
 },
 
 
-'d_e': {
+1: {
 
     # n-state transitions
     (0, 0, 0, 0): lambda p_ns,p_i,p_e: p_ns*(1-p_i)*(1-p_e),
@@ -62,8 +63,26 @@ TRANSITIONS = {
     (1, 0, 1, 1): lambda p_ns,p_i,p_e: 0.16*p_ns*p_i*p_e,
     (1, 1, 0, 1): lambda p_ns,p_i,p_e: 0.84*p_ns*(1-p_i)*p_e,
     (1, 1, 1, 1): lambda p_ns,p_i,p_e: 0.84*p_ns*p_i*p_e,
-}
+},
+4: {
 
+    # n-state transitions
+    (0, 0, 1, 0): lambda p_ns, p_i, p_e: p_ns * p_i * (1 - p_e),
+    (0, 0, 0, 0): lambda p_ns, p_i, p_e: p_ns * (1 - p_i) * (1 - p_e),
+    (0, 0, 1, 1): lambda p_ns, p_i, p_e: p_ns * p_i * p_e,
+    (0, 0, 0, 1): lambda p_ns, p_i, p_e: p_ns * (1 - p_i) * p_e,
+
+    # s-state transitions
+    (1, 0, 1, 0): lambda p_ns, p_i, p_e: 0.16 * p_ns * p_i * (1 - p_e),
+    (1, 0, 0, 0): lambda p_ns, p_i, p_e: 0.16 * p_ns * (1 - p_i) * (1 - p_e),
+    (1, 1, 1, 0): lambda p_ns, p_i, p_e: 0.84 * p_ns * p_i * (1 - p_e),
+    (1, 1, 0, 0): lambda p_ns, p_i, p_e: 0.84 * p_ns * (1 - p_i) * (1 - p_e),
+
+    (1, 0, 1, 1): lambda p_ns, p_i, p_e: 0.16 * p_ns * p_i * p_e,
+    (1, 0, 0, 1): lambda p_ns, p_i, p_e: 0.16 * p_ns * (1 - p_i) * p_e,
+    (1, 1, 1, 1): lambda p_ns, p_i, p_e: 0.84 * p_ns * p_i * p_e,
+    (1, 1, 0, 1): lambda p_ns, p_i, p_e: 0.84 * p_ns * (1 - p_i) * p_e,
+}
 }
 
 
@@ -81,7 +100,8 @@ schedule = [0]*32
 d_e = 1
 d_i = 2
 d_o = 3
-
+d_n = 4
+policy = {}
 
 def time(stage):
     return 9+(0.25*(stage-1))
@@ -97,13 +117,12 @@ def lambda_It(stage):
 
 def p_I(stage):
     return math.e**(-lambda_It(stage)*time(stage))*lambda_It(stage)*time(stage)
-
 def p_E(stage):
     return math.e**(-lambda_E*time(stage))*lambda_E*time(stage)
 def p_NS(stage):
-    if schedule[stage] == 0:
+    if schedule[stage-1] == 0:
         return 0
-    if schedule[stage] == 1:
+    if schedule[stage-1] == 1:
         return 1
 
 
@@ -130,16 +149,24 @@ def revenue(state,decision, stage):
                 return -i(state)*w_i-o(state)*w_o
             if ns(state) == 1: #somebody scheduled
                 return -i(state)*w_i-(0.84+o(state))*w_o
+            else:
+                return 0
         if decision == d_i:
             if ns(state) == 0:
                 return r_i - o(state)*w_o - (i(state)-1)*w_i
             if ns(state) == 1:
                 return r_i - (o(state)+0.84)*w_o-(i(state)-1)*w_i
+            else:
+                return 0
         if decision == d_o:
             if ns(state) == 1:
                 return r_o - o(state)*w_o -i(state)*w_i
             if ns(state) ==0:
                 return r_o - (o(state)-1)*w_o - i(state)*w_i
+            else:
+                return 0
+        if decision == d_n:
+                return - o(state)*w_o -i(state)*w_i
 
 
 #transition probabilities
@@ -148,7 +175,7 @@ def transition_prob(state,decision,stage,nextstate):
     if delta not in TRANSITIONS[decision]:
         return 0
     p_i = p_I(stage)
-    p_e = p_E
+    p_e = p_E(stage)
     p_ns = p_NS(stage)
 
     return TRANSITIONS[decision][delta](
@@ -157,10 +184,73 @@ def transition_prob(state,decision,stage,nextstate):
         p_e,
     )
 
+def nextposiiblestates(state):
+    nextstates = []
+    list = [0,1,2,3]
+    z = [0,0,0,0]
+    for L in range(len(list) + 1):
+        for subset in itertools.combinations(list, L):
+            zc = z.copy()
+            for i in range(len(subset)):
+                zc[subset[i]] += 1
+            nextstates.append([a + b for a, b in zip(state, zc)])
+    for L in range(len(list) + 1):
+        for subset in itertools.combinations(list, L):
+            zc = z.copy()
+            if len(subset) == 0:
+                continue
+            for i in range(len(subset)):
+                zc[subset[i]] -= 1
+
+            new_state = [a + b for a, b in zip(state, zc)]
+            if all(x >= 0 for x in new_state):
+                nextstates.append(new_state)
+    return nextstates
+
 def recurrence_relation(stage, state):
     if stage == 33:
-        return revenue(33,0, stage) #independent of the decision
+        return revenue(state,0, 33), None #independent of the decision
     else:
-        return max(revenue(state,d_i,stage)+ )
+        values = {}
+
+        if i(state) > 0 and e(state)== 0:
+            values["d_i"] = revenue(state, d_i, stage) + sumrec(state, d_i, stage)
+
+        if e(state) > 0:
+            values["d_e"] = revenue(state, d_e, stage) + sumrec(state, d_e, stage)
+
+        if o(state) > 0 and e(state) == 0:
+            values["d_o"] = revenue(state, d_o, stage) + sumrec(state, d_o, stage)
+
+        if sum(state[1:]) == 0:
+            values["d_n"] = revenue(state, d_n, stage) + sumrec(state, d_n, stage)
+
+        best_decision = max(values, key=values.get)
+        best_value = values[best_decision]
+        policy[(stage, tuple(state))] = best_decision
+        return best_value, best_decision
 
 
+def sumrec(state,decision, stage):
+    sums = 0
+    if decision == d_i:
+        for st in nextposiiblestates(state):
+            sums += transition_prob(state, d_i, stage, st) * recurrence_relation(stage + 1, st)[0]
+        return sums
+    if decision == d_e:
+        for st in nextposiiblestates(state):
+            sums += transition_prob(state, d_e, stage, st) * recurrence_relation(stage + 1, st)[0]
+        return sums
+    if decision == d_o:
+        for st in nextposiiblestates(state):
+            sums += transition_prob(state, d_o, stage, st) * recurrence_relation(stage + 1, st)[0]
+        return sums
+    if decision == d_n:
+        for st in nextposiiblestates(state):
+            sums += transition_prob(state, d_n, stage, st) * recurrence_relation(stage + 1, st)[0]
+        return sums
+
+
+print(recurrence_relation(32,(0,2,2,0)))
+print(policy)
+#print(nextposiiblestates((2,0,0,0)))
