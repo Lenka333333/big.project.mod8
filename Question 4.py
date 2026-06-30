@@ -4,7 +4,7 @@ import itertools
 
 TRANSITIONS = {
 
-2: {
+3: {
 
     # n-state transitions
     (0, 0, 0, 0): lambda p_ns,p_i,p_e: p_ns*p_i*(1-p_e),
@@ -24,7 +24,7 @@ TRANSITIONS = {
 },
 
 
-3: {
+2: {
 
     # n-state transitions
     (0,-1, 0, 0): lambda p_ns,p_i,p_e: p_ns*(1-p_i)*(1-p_e),
@@ -92,11 +92,11 @@ pi_o = 10
 pi_i = 200
 lambda_E = 1
 lambda_I = 21/8 #not sure about this number
-schedule = [0]*32
+schedule = [1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1]
 #give the decisions numbers, so they are comparable
 d_e = 1
-d_i = 2
-d_o = 3
+d_o = 2
+d_i = 3
 d_n = 4
 policy = {}
 
@@ -116,11 +116,6 @@ def p_I(stage):
     return 1 - math.e**(-lambda_It(stage)*time(stage))
 def p_E(stage):
     return 1 - math.e**(-lambda_E*time(stage))
-def p_NS(stage):
-    if schedule[stage-1] == 0:
-        return 0
-    if schedule[stage-1] == 1:
-        return 1
 
 
 
@@ -157,7 +152,7 @@ def revenue(state,decision, stage):
                 return 0
         if decision == d_o:
             if ns(state) == 1:
-                return r_o - o(state)*w_o -i(state)*w_i
+                return r_o - (o(state)-1+0.84)*w_o -i(state)*w_i
             if ns(state) ==0:
                 return r_o - (o(state)-1)*w_o - i(state)*w_i
             else:
@@ -194,75 +189,114 @@ def nextpossiblestates(state,decision,stage):
         if stage == 32 or schedule[stage] == 0:
             possible_changes = ((0, 0, 0, -1),(0, 0, 1, -1),(0, 0, 0, 0),(0, 0, 1, 0))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
         if schedule[stage] == 1: #ns intentionaly changed to 0, so I dont add that
             possible_changes = ((0, 0, 0, -1),(0, 0, 1, -1),(0, 1, 0, -1),(0, 1, 1, -1),(0, 0, 0, 0),(0, 0, 1, 0),(0, 1, 0, 0),(0, 1, 1, 0))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
     if decision == d_i:
         if stage == 32 or schedule[stage] == 0:
             possible_changes = ((0, 0, 0, 0),(0, 0,-1, 0),(0, 0, 0, 1),(0, 0,-1, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
         if schedule[stage] == 1:
             possible_changes = ((0, 0, 0, 0),(0, 0,-1, 0),(0, 1, 0, 0),(0, 1,-1, 0),(0, 0, 0, 1),(0, 0,-1, 1),(0, 1, 0, 1),(0, 1,-1, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
     if decision == d_o:
         if stage == 32 or schedule[stage] == 0:
             possible_changes = ((0,-1, 0, 0),(0,-1, 1, 0),(0,-1, 0, 1),(0,-1, 1, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
         if schedule[stage] == 1:
             possible_changes = ((0, 0, 0, 0),(0, 0, 1, 0),(0,-1, 0, 0),(0,-1, 1, 0),(0, 0, 0, 1),(0, 0, 1, 1),(0,-1, 0, 1),(0,-1, 1, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]  # ns of the NEXT stage
+                else:
+                    new_state[0] = 0  # or whatever is appropriate at stage 33
+
+                if all(x >= 0 for x in new_state):
+                    nextstates.append(new_state)
             return nextstates
     if decision == d_n:
         if stage == 32 or schedule[stage] == 0:
             possible_changes = ((0, 0, 1, 0),(0, 0, 0, 0),(0, 0, 1, 1),(0, 0, 0, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+                nextstates.append(new_state)
             return nextstates
         if schedule[stage] == 1:
             possible_changes = ((0, 0, 1, 0),(0, 0, 0, 0),(0, 1, 1, 0),(0, 1, 0, 0),(0, 0, 1, 1),(0, 0, 0, 1),(0, 1, 1, 1),(0, 1, 0, 1))
             for i in possible_changes:
-                nextstates.append([a + b for a, b in zip(i, state)])
+                new_state = [a + b for a, b in zip(i, state)]
+                if stage < 32:
+                    new_state[0] = schedule[stage]
+                else:
+                    new_state[0] = 0
+                nextstates.append(new_state)
             return nextstates
 
 
 V = {}
-reachable = {}
-decisions = (d_n,d_o,d_i,d_e)
 def backwardsolution():
-    reachable[1] = {(0, 0, 0, 0)}
-    for stage in range(1, 33):
-        reachable[stage + 1] = set()
-
-        for state in reachable[stage]:
-            for decision in decisions:
-                for next_state in nextpossiblestates(state, decision, stage):
-                    reachable[stage + 1].add(next_state)
-    '''
     stage = 33
     ns = 0
-    for o in range(stage):
-        for i in range(stage):
-            for e in range(stage):
+    for o in range(sum(schedule)+1):
+        for i in range(stage+1):
+            for e in range(stage+1):
                 state = (ns, o, i, e)
-                V[(33,state)] = revenue(state,0,33)
-    for stagei in range(32,0,-1):
-        ns = schedule[stagei-1]
-        for o in range(stagei):
-            for i in range(stagei):
-                for e in range(stagei):
-    '''
-                    state = (ns, o, i, e)
+                V[(33, state)] = revenue(state, 0, 33)
+    for stagei in range(32, 0, -1):
+        nsi = schedule[stagei - 1]
+        for o in range(sum(schedule[:stagei])+1):
+            for i in range(stagei+1):
+                for e in range(stagei+1):
+                    state = (nsi,o,i,e)
                     bestvalue = -float("inf")
                     bestdecision = None
 
@@ -282,13 +316,16 @@ def backwardsolution():
                     for decision in decisions:
                         val = revenue(state,decision, stagei)
 
-                        for nextst in nextposiiblestates(state, decision, stagei):
+
+                        for nextst in nextpossiblestates(state, decision, stagei):
                             val += (transition_prob(state,decision,stagei,nextst)*V[(stagei+1,tuple(nextst))])
 
                         if val > bestvalue:
                             bestvalue = val
                             bestdecision = decision
-
+                    if stagei == 32:
+                        if state[3] == 0:
+                            print((stagei,state), bestvalue, bestdecision, "\n")
                     V[(stagei,state)] = bestvalue
                     policy[(stagei,state)] = bestdecision
     return V,policy
@@ -329,6 +366,6 @@ def sumrec(state, decision, stage):
         )
     return total
 '''
-print(backwardsolution())
+backwardsolution()
 
 #print(nextposiiblestates((2,0,0,0)))
